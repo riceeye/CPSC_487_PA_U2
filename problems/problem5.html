@@ -22,11 +22,77 @@
 <body>
 <script type="module">
     import {ThreeEngine} from "../js/utils/utils_three.js";
+    import {get_default_lil_gui, refresh_displays} from "../js/utils/utils_three.js";
+    import {mul_matrix_matrix} from "../js/utils/utils_math.js";
 
     // todo: recreate this visualization, demonstrating your understanding of SE(2)
     // todo: https://yale-cpsc-487-587-internal-djrakita-c95fa6c3239a481a48d29a6b0fd.gitlab.io/html/visualizations/point_mapping_2D_direct_isometry.html
     // todo: (no need to draw the unit circle here)
     // todo: or, feel free to come up with any create visualization here that demonstrates your understanding of SE(2)
+
+    let engine = ThreeEngine.new_default_2d();
+    engine.add_standard2Dshape_as_mesh_object(0x00eeff);
+
+    let settings = {
+        points: true,
+        wireframe: true,
+        mesh: false,
+        point_size: 0.02,
+        t_x: 0.0,
+        t_y: 0.0,
+        rotation: 0.0
+    }
+
+    let actions = {
+        reset: function() {
+            settings.t_x = 0.0;
+            settings.t_y = 0.0;
+            settings.rotation = 0.0;
+            refresh_displays(gui);
+        }
+    };
+
+    let gui = get_default_lil_gui();
+    gui.add(settings, 'points').name('Draw Points');
+    gui.add(settings, 'wireframe').name('Draw Wireframe');
+    gui.add(settings, 'mesh').name('Draw Mesh');
+    gui.add(settings, 'point_size', 0.001, 0.03).name('Point Size');
+
+    let folder = gui.addFolder('Isometry Controls');
+    folder.add(settings, 't_x', -2, 2).name('Translation x');
+    folder.add(settings, 't_y', -2, 2).name('Translation y');
+    folder.add(settings, 'rotation', -Math.PI, Math.PI);
+    folder.add(actions, 'reset').name('Reset');
+
+    let standard_points = engine.get_local_vertex_positions_of_mesh_object(0);
+    let wireframe_points = engine.get_local_vertex_positions_of_mesh_object_wireframe(0);
+
+    engine.animation_loop(() => {
+        let m = [[Math.cos(settings.rotation), -Math.sin(settings.rotation), settings.t_x], [Math.sin(settings.rotation), Math.cos(settings.rotation), settings.t_y], [0, 0, 1]];
+
+        let new_standard_points = standard_points.map(point => {
+            let homogenous_coords = [[point[0][0]], [point[1][0]], [1.0]];
+            let res = mul_matrix_matrix(m, homogenous_coords);
+            return [res[0][0], res[1][0]];
+        });
+        let new_wireframe_points = wireframe_points.map(point => {
+            let homogenous_coords = [[point[0][0]], [point[1][0]], [1.0]];
+            let res = mul_matrix_matrix(m, homogenous_coords);
+            return [res[0][0], res[1][0]];
+        });
+
+        engine.update_vertex_positions_of_mesh_object(0, new_standard_points);
+        engine.update_vertex_positions_of_mesh_object_wireframe(0, new_wireframe_points);
+
+        if (settings.points) {
+            new_standard_points.forEach(point => {
+                engine.draw_debug_sphere(point, settings.point_size, 0xeeee00);
+            });
+        }
+
+        engine.mesh_objects[0].visible = settings.mesh;
+        engine.set_mesh_object_wireframe_visibility(0, settings.wireframe);
+    });
 
 </script>
 </body>

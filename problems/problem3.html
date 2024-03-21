@@ -22,8 +22,8 @@
 <body>
 <script type="module">
     import {ThreeEngine} from "../js/utils/utils_three.js";
-    import {get_default_lil_gui, refresh_displays} from "../js/utils/utils_three";
-    import {mul_matrix_matrix} from "../js/utils/utils_math";
+    import {get_default_lil_gui, refresh_displays} from "../js/utils/utils_three.js";
+    import {mul_matrix_matrix} from "../js/utils/utils_math.js";
 
     // todo: recreate this visualization, demonstrating your understanding of SO(2)
     // todo: https://yale-cpsc-487-587-internal-djrakita-c95fa6c3239a481a48d29a6b0fd.gitlab.io/html/visualizations/point_mapping_2D_so2.html
@@ -50,10 +50,10 @@
     };
 
     let gui = get_default_lil_gui();
-    gui.add(settings, 'points').name("Draw Points");
-    gui.add(settings, 'wireframe').name("Draw Wireframe");
-    gui.add(settings, 'mesh').name("Draw Mesh");
-    gui.add(settings, 'point_size', 0.001, 0.03).name("Point Size");
+    gui.add(settings, 'points').name('Draw Points');
+    gui.add(settings, 'wireframe').name('Draw Wireframe');
+    gui.add(settings, 'mesh').name('Draw Mesh');
+    gui.add(settings, 'point_size', 0.001, 0.03).name('Point Size');
 
     let folder = gui.addFolder('Matrix Controls');
     folder.add(settings, 'theta', -Math.PI, Math.PI);
@@ -71,7 +71,7 @@
         engine.draw_debug_vector([0,0], c1, 0.035, undefined, 0xff3333);
         engine.draw_debug_vector([0,0], c2, 0.035, undefined, 0x33ff33);
 
-        let d = m[0][0]*m[1][1] - m[0][1]*m[1][0];
+        let d = Math.cos(settings.theta)*Math.cos(settings.theta) + Math.sin(settings.theta)*Math.sin(settings.theta);
         settings.determinant = d.toString();
         refresh_displays(gui);
 

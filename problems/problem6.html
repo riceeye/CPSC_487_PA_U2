@@ -22,11 +22,98 @@
 <body>
 <script type="module">
     import {ThreeEngine} from "../js/utils/utils_three.js";
+    import {get_default_lil_gui, refresh_displays} from "../js/utils/utils_three.js";
+    import {mul_matrix_matrix} from "../js/utils/utils_math.js";
+    import {mul_matrix_scalar} from "../js/utils/utils_math.js";
 
     // todo: recreate this visualization, demonstrating your understanding of displacement-based distance in SE(2)
     // todo: https://yale-cpsc-487-587-internal-djrakita-c95fa6c3239a481a48d29a6b0fd.gitlab.io/html/visualizations/SE2_distance2.html
     // todo: make sure you are using the displacement-based distance!
     // todo: or, feel free to come up with any create visualization here that demonstrates your understanding of SE(2) distance
+
+    let engine = ThreeEngine.new_default_2d();
+
+    let settings = {
+        Theta1: 0.0,
+        tx1: 0.0,
+        ty1: 0.0,
+        Theta2: 0.0,
+        tx2: 0.0,
+        ty2: 0.0,
+        distance: '0.0'
+    }
+
+    let actions = {
+        reset1: function() {
+            settings.Theta1 = 0.0;
+            settings.tx1 = 0.0;
+            settings.ty1 = 0.0;
+            refresh_displays(gui);
+        },
+        reset2: function() {
+            settings.Theta2 = 0.0;
+            settings.tx2 = 0.0;
+            settings.ty2 = 0.0;
+            refresh_displays(gui);
+        }
+    };
+
+    let gui = get_default_lil_gui();
+    gui.add(settings, 'Theta1', -2*Math.PI, 2*Math.PI);
+    gui.add(settings, 'tx1', -2, 2);
+    gui.add(settings, 'ty1', -2, 2);
+    gui.add(actions, 'reset1');
+
+    gui.add(settings, 'Theta2', -2*Math.PI, 2*Math.PI);
+    gui.add(settings, 'tx2', -2, 2);
+    gui.add(settings, 'ty2', -2, 2);
+    gui.add(actions, 'reset2');
+
+    gui.add(settings, 'distance').name('disp based dis').disable();
+
+    function se2_multiply(matrix, point) {
+        let homogenous_coords = [[point[0]], [point[1]], [1.0]];
+        let temp = mul_matrix_matrix(matrix, homogenous_coords);
+        return [temp[0][0], temp[1][0]];
+    }
+
+    function se2_distance(m1, m2) {
+        let R_T = [[m1[0][0], m1[1][0]], [m1[0][1], m1[1][1]]];
+        let t1_inv = mul_matrix_matrix(R_T, [[-m1[0][2]], [-m1[1][2]]]);
+        let m1_inv = [[R_T[0][0], R_T[0][1], t1_inv[0][0]],
+                        [R_T[1][0], R_T[1][1], t1_inv[1][0]],
+                        [0,0,1]];
+
+        let disp = mul_matrix_matrix(m1_inv, m2);
+
+        let a1 = Math.atan2(disp[1][0], disp[0][0]);
+        let p, q;
+        if(Math.abs(a1) < 0.0001) {
+            p = 1 - a1 ** 2 / 6 + a1 ** 4 / 120;
+            q = a1 / 2 - a1 ** 3 / 24 + a1 ** 5 / 720;
+        }
+        else {
+            p = Math.sin(a1) / a1;
+            q = (1 - Math.cos(a1)) / a1;
+        }
+        let a23 = mul_matrix_scalar(mul_matrix_matrix([[p, q], [-q, p]], [[disp[0][2]], [disp[1][2]]]), 1.0/(p**2 + q**2));
+        console.log(a23);
+        return Math.sqrt(a1**2 + a23[0][0]**2 + a23[1][0]**2);
+    }
+
+    engine.animation_loop(() => {
+        let m1 = [[Math.cos(settings.Theta1), -Math.sin(settings.Theta1), settings.tx1], [Math.sin(settings.Theta1), Math.cos(settings.Theta1), settings.ty1], [0, 0, 1]];
+        let m2 = [[Math.cos(settings.Theta2), -Math.sin(settings.Theta2), settings.tx2], [Math.sin(settings.Theta2), Math.cos(settings.Theta2), settings.ty2], [0, 0, 1]];
+
+        engine.draw_debug_vector(se2_multiply(m1, [0,0]), se2_multiply(m1, [1,0]), 0.035, undefined, 0xff3333);
+        engine.draw_debug_vector(se2_multiply(m1, [0,0]), se2_multiply(m1, [0,1]), 0.035, undefined, 0x33ff33);
+
+        engine.draw_debug_vector(se2_multiply(m2, [0,0]), se2_multiply(m2, [1,0]), 0.035, undefined, 0xaa4444);
+        engine.draw_debug_vector(se2_multiply(m2, [0,0]), se2_multiply(m2, [0,1]), 0.035, undefined, 0x44aa44);
+
+        settings.distance = se2_distance(m1, m2).toString();
+        refresh_displays(gui);
+    });
 
 </script>
 </body>
